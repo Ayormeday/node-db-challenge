@@ -1,7 +1,7 @@
 
 const express = require('express');
 
-const Projects = require('./projects-model');
+const Projects = require('./projects-model.js');
 
 const router = express.Router();
 
@@ -41,10 +41,11 @@ router.delete('/:id', validateProjectId, (req, res, next) => {
 
 function validateProjectId(req, res, next) {
   const { id } = req.params;
-  if (!Number.isInteger(Number(id))) {
+  idIsValid = Number(id);
+  if (!Number.isInteger(idIsValid) && idIsValid > 0) {
     next({ message: 'Invalid project id' })
   }
-  Projects.getProject(id).then(project => {
+  Projects.getProject(idIsValid).then(project => {
     if (project) {
       req.project = project
       next();
