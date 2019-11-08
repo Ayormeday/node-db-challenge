@@ -27,21 +27,21 @@ exports.up = function(knex) {
         tbl
           .boolean("task_status")
           .notNullable()
-          .defaultTo(0);
+          .defaultTo(false);
 
         tbl
           .integer("project_id")
           .unsigned()
           .references("id")
           .inTable("projects")
-          .onDelete("CASCADE")
-          .onUpdate("CASCADE");
+          // .onDelete("CASCADE")
+          // .onUpdate("CASCADE");
       })
       //Resources table
       .createTable("resources", tbl => {
         tbl.increments();
         tbl
-          .integer("resource_name", 255)
+          .string("resource_name", 255)
           .notNullable()
           .unique();
         tbl.string("resource_description", 500);
