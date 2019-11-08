@@ -1,125 +1,76 @@
-const express = require("express");
-const Recipes = require("./recipe-model");
+
+const express = require('express');
+
+const Projects = require('./project-model');
+
 const router = express.Router();
 
-router.get("/", (req, res, next) => {
-  Recipes.getRecipes()
-    .then(recipes => {
-      res.status(200).json(recipes);
-    })
-    .catch(next);
+router.get('/', (req, res, next) => {
+  Projects.getProjects().then(projects => {
+    if (projects) {
+      res.status(200).json(projects);
+    } else {
+      next({ message: "projects not found", status: 404 });
+    }
+  }).catch(next);
 });
 
-router.get("/:id", (req, res, next) => {
+router.get('/:id', validateProjectId, (req, res, next) => {
+  res.status(200).json(req.project);
+});
+
+router.post('/', validateProjectBody, (req, res, next) => {
+  Projects.add(req.body).then(project => {
+    res.status(201).json(project);
+  }).catch(next);
+});
+
+router.put('/:id', validateProjectId, validateProjectBody, (req, res, next) => {
+  Projects.update(req.body, req.project.id).then(updatedScheme => {
+    res.status(200).json(updatedScheme);
+  }).catch(next);
+});
+
+router.delete('/:id', validateProjectId, (req, res, next) => {
+  Projects.remove(req.project.id).then(deleted => {
+    res.status(204).json(req.project);
+  }).catch(next);
+});
+
+//middlewares
+
+function validateProjectId(req, res, next) {
   const { id } = req.params;
-  Recipes.getRecipe(id)
-    .then(recipe => {
-      if (recipe) {
-        res.status(200).json(recipe);
-      } else {
-        res
-          .status(404)
-          .json({ message: "Could not find recipe with given id." });
-      }
-    })
-    .catch(next);
-});
+  if (!Number.isInteger(id)) {
+    next({ message: 'Invalid project id' })
+  }
+  Projects.getProject(id).then(project => {
+    if (project) {
+      req.project = project
+      next();
+    } else {
+      next({ message: 'Could not find project with given id', status: 404 });
+    }
+  }).catch(next);
+}
 
-router.get("/:id/shoppingList", (req, res, next) => {
-  const { id } = req.params;
-  Recipes.getShoppingList(id)
-    .then(ingredients => {
-      if (ingredients.length) {
-        res.status(200).json(ingredients);
-      } else {
-        res
-          .status(404)
-          .json({ message: "Could not find ingredients for given recipe" });
-      }
-    })
-    .catch(next);
-});
-
-router.get("/:id/instructions", (req, res, next) => {
-  const { id } = req.params;
-  Recipes.getInstructions(id)
-    .then(steps => {
-      if (steps.length) {
-        res.status(200).json(steps);
-      } else {
-        res
-          .status(404)
-          .json({ message: "Could not find instruction for given recipe" });
-      }
-    })
-    .catch(next);
-});
-
-router.post("/", (req, res, next) => {
-  const recipeData = req.body;
-  Recipes.add(recipeData)
-    .then(recipe => {
-      res.status(201).json(recipe);
-    })
-    .catch(next);
-});
-
-router.post("/:id/steps", (req, res, next) => {
-  const stepData = req.body;
-  const { id } = req.params;
-
-  Recipes.findById(id)
-    .then(recipe => {
-      if (recipe) {
-        Recipes.addStep(stepData, id).then(step => {
-          res.status(201).json(step);
-        });
-      } else {
-        res
-          .status(404)
-          .json({ message: "Could not find recipe with given id." });
-      }
-    })
-    .catch(next);
-});
-
-router.put("/:id", (req, res, next) => {
-  const { id } = req.params;
-  const changes = req.body;
-
-  Recipes.findById(id)
-    .then(recipe => {
-      if (recipe) {
-        Recipes.update(changes, id).then(updatedScheme => {
-          res.json(updatedScheme);
-        });
-      } else {
-        res
-          .status(404)
-          .json({ message: "Could not find recipe with given id" });
-      }
-    })
-    .catch(next);
-});
-
-router.delete("/:id", (req, res, next) => {
-  const { id } = req.params;
-
-  Recipes.remove(id)
-    .then(deleted => {
-      if (deleted) {
-        res.json({ removed: deleted });
-      } else {
-        res
-          .status(404)
-          .json({ message: "Could not find recipe with given id" });
-      }
-    })
-    .catch(next);
-});
+function validateProjectBody(req, res, next) {
+  const { id, name, description, completed } = req.body;
+  if (!name || typeof completed === 'undefined') {
+    next({ message: 'Missing required `name` and `completed` fields', status: 401 });
+  }
+  req.body = { id, name, description, completed };
+  next();
+}
 
 router.use((error, req, res, next) => {
-  res.status(500).json(error.message);
-});
+  res.status(error.status || 500).json({
+    file: 'project-router',
+    method: req.method,
+    url: req.url,
+    status: error.status || 500,
+    message: error.message
+  });
+})
 
 module.exports = router;
